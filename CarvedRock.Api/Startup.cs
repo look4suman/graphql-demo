@@ -1,5 +1,9 @@
 ﻿using CarvedRock.Api.Data;
+using CarvedRock.Api.GraphQL;
 using CarvedRock.Api.Repositories;
+using GraphQL;
+using GraphQL.Server;
+using GraphQL.Server.Ui.Playground;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -22,11 +26,20 @@ namespace CarvedRock.Api
             services.AddDbContext<CarvedRockDbContext>(options =>
                 options.UseSqlServer(_config["ConnectionStrings:CarvedRock"]));
             services.AddScoped<ProductRepository>();
+
+            services.AddScoped<IDependencyResolver>(x => new FuncDependencyResolver(x.GetRequiredService));
+
+            services.AddScoped<CarvedRockSchema>();
+
+            services.AddGraphQL(x => { x.ExposeExceptions = true; })
+                .AddGraphTypes(ServiceLifetime.Scoped);
+
         }
 
         public void Configure(IApplicationBuilder app, CarvedRockDbContext dbContext)
         {
-            app.UseMvc();
+            app.UseGraphQL<CarvedRockSchema>();
+            app.UseGraphQLPlayground(new GraphQLPlaygroundOptions());
             dbContext.Seed();
         }
     }
